@@ -1,0 +1,53 @@
+### 1. User Collection & Dynamic Greetings
+
+* We'll create a **User** collection.
+* **Email is MANDATORY** - it's the fundamental identifier for user authentication and data management.
+* When the app initializes, the user **MUST** provide their email address before starting any conversation.
+* The **greet()** function will pass the user's email to the backend.
+* In the backend:
+
+  * **If the user already exists** (email found in the database):
+
+    * Retrieve the user's previous conversations.
+    * Greet them warmly with dynamic, human-like messages, such as:
+
+      * "Hey, welcome back! Hope you're having a great weekday. Haven't spoken in the last 2-3 days—how's everything?"
+      * "So, have you eaten since your last meal? You had lunch before, right? Should we talk about dinner now?"
+    * Make it context-aware:
+
+      * If lunch was logged, ask about dinner.
+      * If dinner was logged but it's the next day, ask about breakfast.
+      * If it's the same day, maybe suggest a snack.
+    * Keep the conversation flow natural and lively, **not robotic**.
+  * **If the user doesn't exist** (email not found):
+
+    * Create a new user record with the provided email.
+    * Greet them in a friendly, welcoming way like:
+
+      * "Hey! I think it's our first chat. I'm Nutrina. We can catch up daily, track your meals, and build healthy habits together."
+
+### 2. Storing Completed Meals
+
+* When a meal conversation feels complete (user finished logging that meal), store the conversation in the database as part of the session.
+* All conversations are stored under the user's email for proper tracking and retrieval.
+
+### 3. Database Collections
+
+The main collections you'll use:
+
+* **Users:** stores user records (with email as the primary identifier).
+* **Sessions:** stores session IDs, user IDs (linked to email), and related conversations.
+* **Conversations:** keeps the actual conversation data linked to the user's email.
+
+Also, check the existing collections to make sure the structure fits smoothly.
+
+### 4. Email Requirements
+
+* **Email is REQUIRED** - no anonymous sessions allowed
+* Email serves as the unique identifier for:
+  - User authentication
+  - Conversation history retrieval
+  - Personalized greetings
+  - Progress tracking
+  - Data persistence
+* Without email, the application cannot function properly as it needs to identify and track users.

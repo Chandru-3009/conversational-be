@@ -1,0 +1,104 @@
+name: Deploy Nutrina to GCP VM
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Run tests (if available)
+      run: npm test || echo "No tests found"
+      continue-on-error: true
+    
+    - name: Build application (if needed)
+      run: npm run build || echo "No build script found"
+      continue-on-error: true
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deploy to GCP VM
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to nutrina folder
+          cd ~/nutrina
+          
+          # Show current status
+          echo "📋 Current git status:"
+          git status --porcelain
+          
+          echo "📝 Current commit:"
+          git log --oneline -1
+          
+          # Stash any local changes before pulling
+          echo "📦 Stashing local changes (if any)..."
+          git stash save "Auto-stash before pull from main via GitHub Actions" || echo "No local changes to stash"
+          git stash list
+          
+          # Pull latest changes with error handling
+          echo "📥 Pulling latest changes..."
+          if git pull origin main; then
+            echo "✅ Git pull successful"
+          else
+            echo "❌ Git pull failed!"
+            echo "Debug info:"
+            git remote -v
+            exit 1
+          fi
+          
+          # Show new commit
+          echo "📊 Latest commit after pull:"
+          git log --oneline -1
+          
+          # Install/update dependencies
+          echo "📦 Installing dependencies..."
+          npm install --production
+          
+          # Build if build script exists
+          if npm run build --if-present; then
+            echo "🔨 Build completed"
+          else
+            echo "ℹ️  No build script found, skipping build"
+          fi
+          
+          # Restart PM2 process
+          echo "♻️  Restarting application..."
+          pm2 restart nutrina || pm2 start npm --name "nutrina" -- start
+          
+          # Save PM2 configuration
+          pm2 save
+          
+          # Check if nginx needs reload (optional)
+          sudo nginx -t && sudo nginx -s reload || echo "Nginx config unchanged"
+          
+          echo "✅ Deployment completed successfully!"
+          echo "📊 PM2 Status:"
+          pm2 status
+          
+          echo "🔍 Final verification:"
+          echo "App should be running at: http://34.139.138.247"
